@@ -14,7 +14,15 @@ const COLORS = [
   '#5c7cfa', // J - blue
   '#ffb74d', // L - orange
   '#bfa15a', // N - tuerca (bronce)
+  '#ff5252', // power-up: bomba
+  '#ffeb3b', // power-up: rayo
+  '#ec407a', // power-up: tinte
+  '#26c6da', // power-up: gravedad
+  '#7e57c2', // power-up: congelar
 ];
+
+const POWERUP_GLYPHS = ['', '', '', '', '', '', '', '', '', 'B', 'R', 'T', 'G', 'C'];
+const POWERUP_TYPES = ['bomb', 'lightning', 'dye', 'gravity', 'freeze'];
 
 const PIECES = [
   null,
@@ -29,6 +37,9 @@ const PIECES = [
 ];
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
+const POWERUP_FREQUENCY = 5;
+const POWERUP_SCORE = 50;
+const FREEZE_DURATION_MS = 5000;
 
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
@@ -42,8 +53,11 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const themeSwitch = document.getElementById('theme-switch');
+const freezeSection = document.getElementById('freeze-section');
+const freezeValueEl = document.getElementById('freeze-value');
 
-let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId,
+    nextIsPowerUp, freezeUntil;
 
 function getGridColor() {
   return getComputedStyle(document.body).getPropertyValue('--grid-line').trim();
@@ -68,6 +82,13 @@ function randomPiece() {
   const type = Math.floor(Math.random() * 8) + 1;
   const shape = PIECES[type].map(row => [...row]);
   return { type, shape, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0 };
+}
+
+function randomPowerUpPiece() {
+  const idx = Math.floor(Math.random() * POWERUP_TYPES.length);
+  const type = 9 + idx;
+  const shape = [[type]];
+  return { type, shape, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0, powerUp: POWERUP_TYPES[idx] };
 }
 
 function collide(shape, ox, oy) {
@@ -122,10 +143,14 @@ function clearLines() {
     }
   }
   if (cleared) {
+    const prevLines = lines;
     lines += cleared;
     score += (LINE_SCORES[cleared] || 0) * level;
     level = Math.floor(lines / 10) + 1;
     dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+    if (Math.floor(prevLines / POWERUP_FREQUENCY) < Math.floor(lines / POWERUP_FREQUENCY)) {
+      nextIsPowerUp = true;
+    }
     updateHUD();
   }
 }
@@ -155,13 +180,81 @@ function softDrop() {
 
 function lockPiece() {
   merge();
+  if (current.powerUp) activatePowerUp(current.powerUp, current.x, current.y);
   clearLines();
   spawn();
 }
 
+function activatePowerUp(name, x, y) {
+  switch (name) {
+    case 'bomb': powerUpBomb(x, y); break;
+    case 'lightning': powerUpLightning(x, y); break;
+    case 'dye': powerUpDye(); break;
+    case 'gravity': powerUpGravity(); break;
+    case 'freeze': powerUpFreeze(); break;
+  }
+  score += POWERUP_SCORE * level;
+  updateHUD();
+}
+
+function powerUpBomb(x, y) {
+  for (let r = y - 1; r <= y + 1; r++) {
+    if (r < 0 || r >= ROWS) continue;
+    for (let c = x - 1; c <= x + 1; c++) {
+      if (c < 0 || c >= COLS) continue;
+      board[r][c] = 0;
+    }
+  }
+}
+
+function powerUpLightning(x, y) {
+  for (let c = 0; c < COLS; c++) board[y][c] = 0;
+  for (let r = 0; r < ROWS; r++) board[r][x] = 0;
+}
+
+function powerUpDye() {
+  const counts = {};
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++) {
+      const v = board[r][c];
+      if (v) counts[v] = (counts[v] || 0) + 1;
+    }
+  const keys = Object.keys(counts);
+  if (keys.length === 0) return;
+  let bestColor = null, bestCount = -1;
+  for (const k of keys) {
+    if (counts[k] > bestCount) { bestCount = counts[k]; bestColor = Number(k); }
+  }
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++)
+      if (board[r][c] === bestColor) board[r][c] = 0;
+}
+
+function powerUpGravity() {
+  for (let c = 0; c < COLS; c++) {
+    const colVals = [];
+    for (let r = 0; r < ROWS; r++) {
+      if (board[r][c]) colVals.push(board[r][c]);
+    }
+    const startRow = ROWS - colVals.length;
+    for (let r = 0; r < ROWS; r++) {
+      board[r][c] = (r < startRow) ? 0 : colVals[r - startRow];
+    }
+  }
+}
+
+function powerUpFreeze() {
+  freezeUntil = performance.now() + FREEZE_DURATION_MS;
+}
+
 function spawn() {
   current = next;
-  next = randomPiece();
+  if (nextIsPowerUp) {
+    next = randomPowerUpPiece();
+    nextIsPowerUp = false;
+  } else {
+    next = randomPiece();
+  }
   if (collide(current.shape, current.x, current.y)) {
     endGame();
   }
@@ -174,6 +267,15 @@ function updateHUD() {
   levelEl.textContent = level;
 }
 
+function updateFreezeIndicator(remainingMs) {
+  freezeSection.classList.remove('hidden');
+  freezeValueEl.textContent = Math.ceil(remainingMs / 1000) + 's';
+}
+
+function hideFreezeIndicator() {
+  freezeSection.classList.add('hidden');
+}
+
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
   const color = COLORS[colorIndex];
@@ -183,6 +285,14 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
   // highlight
   context.fillStyle = 'rgba(255,255,255,0.12)';
   context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+  const glyph = POWERUP_GLYPHS[colorIndex];
+  if (glyph) {
+    context.fillStyle = '#ffffff';
+    context.font = `bold ${Math.floor(size * 0.55)}px sans-serif`;
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(glyph, x * size + size / 2, y * size + size / 2 + 1);
+  }
   context.globalAlpha = 1;
 }
 
@@ -261,13 +371,19 @@ function togglePause() {
 function loop(ts) {
   const dt = ts - lastTime;
   lastTime = ts;
-  dropAccum += dt;
-  if (dropAccum >= dropInterval) {
-    dropAccum = 0;
-    if (!collide(current.shape, current.x, current.y + 1)) {
-      current.y++;
-    } else {
-      lockPiece();
+  const frozen = freezeUntil && ts < freezeUntil;
+  if (frozen) {
+    updateFreezeIndicator(freezeUntil - ts);
+  } else {
+    if (freezeUntil) { freezeUntil = 0; hideFreezeIndicator(); }
+    dropAccum += dt;
+    if (dropAccum >= dropInterval) {
+      dropAccum = 0;
+      if (!collide(current.shape, current.x, current.y + 1)) {
+        current.y++;
+      } else {
+        lockPiece();
+      }
     }
   }
   draw();
@@ -284,6 +400,9 @@ function init() {
   gameOver = false;
   dropInterval = 1000;
   dropAccum = 0;
+  nextIsPowerUp = false;
+  freezeUntil = 0;
+  hideFreezeIndicator();
   lastTime = performance.now();
   next = randomPiece();
   spawn();

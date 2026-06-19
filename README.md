@@ -43,6 +43,7 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
 - **Niveles** que aumentan cada 10 líneas y aceleran la caída.
 - **Pausa** y **Game Over** con opción de reinicio.
 - **Toggle de tema claro/oscuro**: modo oscuro por defecto, con un switch en el panel lateral para cambiar a modo claro. La preferencia se guarda en `localStorage`.
+- **Power-ups aleatorios**: cada 5 líneas eliminadas aparece una pieza especial de 1×1 con un efecto al caer (Bomba, Rayo, Tinte, Gravedad, Congelar).
 
 ---
 
@@ -119,6 +120,7 @@ Contiene toda la lógica del juego. A grandes rasgos:
 - **Nivel y velocidad**: el nivel sube cada 10 líneas; la velocidad de caída se calcula como `max(100, 1000 − (level − 1) × 90)` milisegundos.
 - **Ghost piece** (`ghostY`): proyecta la posición final de la pieza actual hacia abajo y la dibuja con `globalAlpha = 0.2`.
 - **Tema claro/oscuro** (`initTheme`, `applyTheme`): alterna la clase `light-theme` en `<body>` según el switch del panel, persiste la preferencia en `localStorage` y actualiza el color del grid del canvas (`drawGrid`) leyendo la variable CSS `--grid-line` para que también respete el tema activo.
+- **Power-ups** (`activatePowerUp`, `randomPowerUpPiece`): cada vez que las líneas acumuladas cruzan un múltiplo de `POWERUP_FREQUENCY` (5), la siguiente pieza generada es una pieza especial de 1 celda con uno de 5 efectos elegidos al azar: Bomba (destruye un área 3×3), Rayo (limpia fila + columna), Tinte (elimina el color más frecuente del tablero), Gravedad (compacta cada columna) y Congelar (pausa la caída automática 5s sin bloquear el movimiento). Otorgan una bonificación de `POWERUP_SCORE × nivel` al activarse.
 
 ### Flujo del juego
 
@@ -178,6 +180,9 @@ Algunos parámetros fáciles de tunear en `game.js`:
 | `COLORS`       | Paleta de colores por tipo de pieza      | 8 colores             |
 | `LINE_SCORES`  | Puntos por 1, 2, 3 o 4 líneas eliminadas | `[0,100,300,500,800]` |
 | `dropInterval` | Velocidad inicial de caída en ms         | `1000`                |
+| `POWERUP_FREQUENCY` | Líneas eliminadas entre power-ups   | `5`                    |
+| `POWERUP_SCORE`     | Bono de puntos al activar un power-up (×nivel) | `50`            |
+| `FREEZE_DURATION_MS` | Duración del efecto Congelar en ms | `5000`                 |
 
 > Si cambias `COLS`, `ROWS` o `BLOCK`, recuerda ajustar también `width` y `height` del `<canvas id="board">` en `index.html` para que coincida (`COLS × BLOCK` × `ROWS × BLOCK`).
 
