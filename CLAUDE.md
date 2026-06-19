@@ -36,8 +36,8 @@ Three files, no modules/bundler:
 
 Module-level `let` variables (`board`, `current`, `next`, `score`, `lines`, `level`, `paused`, `gameOver`, `dropInterval`, etc.) hold all game state — there is no central state object or framework.
 
-- `board`: `ROWS × COLS` matrix; each cell is `0` (empty) or a piece-color index `1–7`.
-- `PIECES`: the 7 tetromino shapes as square matrices of color indices; `current`/`next` are `{ type, shape, x, y }`.
+- `board`: `ROWS × COLS` matrix; each cell is `0` (empty) or a piece-color index `1–8`.
+- `PIECES`: the 7 standard tetromino shapes plus an 8th challenge piece (`N`, a 3×3 "nut" ring with an empty center cell), as square matrices of color indices; `current`/`next` are `{ type, shape, x, y }`. The hole is just a `0` cell — `collide`/`merge`/`draw` already skip falsy cells, so no special-casing was needed to support it.
 - Rotation (`rotateCW`) is a transpose, not shape-specific rotation tables — works because all piece matrices are square.
 
 ### Game loop and flow
