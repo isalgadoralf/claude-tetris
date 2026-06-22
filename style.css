@@ -153,6 +153,94 @@ kbd {
   color: var(--kbd-text);
 }
 
+/* ---- Highscores ---- */
+.highscores ol {
+  list-style: decimal-leading-zero inside;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.highscores li {
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+.highscores li.highscore-highlight {
+  color: var(--value-color);
+  font-weight: 700;
+  border: 1px solid var(--value-color);
+  background: rgba(122, 162, 247, 0.12);
+}
+
+#reset-scores-btn {
+  margin-top: 4px;
+  background: transparent;
+  color: var(--controls-text);
+  border: 1px solid var(--kbd-border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: background 0.15s, color 0.15s;
+}
+
+#reset-scores-btn:hover {
+  background: var(--kbd-bg);
+  color: var(--text);
+}
+
+/* ---- Game over: guardar puntuación ---- */
+#gameover-extra {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+
+#gameover-extra.hidden {
+  display: none;
+}
+
+#player-name-input {
+  background: var(--kbd-bg);
+  border: 1px solid var(--kbd-border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--text);
+  font-family: inherit;
+  text-align: center;
+  width: 160px;
+}
+
+#player-name-input:focus {
+  outline: none;
+  border-color: var(--value-color);
+}
+
+#save-score-btn {
+  background: var(--restart-bg);
+  color: var(--restart-text);
+  border: none;
+  border-radius: 6px;
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: background 0.15s;
+}
+
+#save-score-btn:hover {
+  background: var(--restart-bg-hover);
+}
+
 /* ---- Theme toggle ---- */
 .theme-toggle {
   display: flex;
