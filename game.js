@@ -53,6 +53,7 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const themeSwitch = document.getElementById('theme-switch');
+const skinSelect = document.getElementById('skin-select');
 const freezeSection = document.getElementById('freeze-section');
 const freezeValueEl = document.getElementById('freeze-value');
 const pauseMenu = document.getElementById('pause-menu');
@@ -74,7 +75,7 @@ const STATS_KEY = 'tetris-stats';
 const MAX_HIGHSCORES = 5;
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId,
-    nextIsPowerUp, freezeUntil, startLevel = 1, combo, bestCombo, maxLines, scoreSaved;
+    nextIsPowerUp, freezeUntil, startLevel = 1, combo, bestCombo, maxLines, scoreSaved, currentSkin;
 
 function getGridColor() {
   return getComputedStyle(document.body).getPropertyValue('--grid-line').trim();
@@ -143,6 +144,24 @@ function renderHighScores(highlightScore) {
 function renderStats() {
   bestComboEl.textContent = bestCombo;
   maxLinesEl.textContent = maxLines;
+}
+
+function applySkin(skin) {
+  currentSkin = skin;
+  document.body.classList.toggle('skin-neon', skin === 'neon');
+  document.body.classList.toggle('skin-pastel', skin === 'pastel');
+  document.body.classList.toggle('skin-pixel', skin === 'pixel');
+  localStorage.setItem('tetris-skin', skin);
+  if (skinSelect.value !== skin) skinSelect.value = skin;
+  draw();
+  drawNext();
+}
+
+function initSkin() {
+  const saved = localStorage.getItem('tetris-skin') || 'retro';
+  applySkin(saved);
+  skinSelect.value = currentSkin;
+  skinSelect.addEventListener('change', () => applySkin(skinSelect.value));
 }
 
 function createBoard() {
@@ -355,15 +374,71 @@ function hideFreezeIndicator() {
   freezeSection.classList.add('hidden');
 }
 
+function lightenColor(hexColor, amount) {
+  const hex = hexColor.replace('#', '');
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  const mix = (channel) => Math.round(channel + (255 - channel) * amount);
+  return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
+}
+
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
   const color = COLORS[colorIndex];
+  const px = x * size + 1;
+  const py = y * size + 1;
+  const psize = size - 2;
   context.globalAlpha = alpha ?? 1;
-  context.fillStyle = color;
-  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-  // highlight
-  context.fillStyle = 'rgba(255,255,255,0.12)';
-  context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+
+  if (currentSkin === 'neon') {
+    context.shadowBlur = 12;
+    context.shadowColor = color;
+    context.fillStyle = color;
+    context.fillRect(px, py, psize, psize);
+    context.shadowBlur = 0;
+    context.fillStyle = 'rgba(255,255,255,0.12)';
+    context.fillRect(px, py, psize, 4);
+  } else if (currentSkin === 'pastel') {
+    const pastelColor = lightenColor(color, 0.4);
+    context.fillStyle = pastelColor;
+    const radius = Math.max(2, size * 0.18);
+    if (context.roundRect) {
+      context.beginPath();
+      context.roundRect(px, py, psize, psize, radius);
+      context.fill();
+    } else {
+      context.beginPath();
+      context.moveTo(px + radius, py);
+      context.arcTo(px + psize, py, px + psize, py + psize, radius);
+      context.arcTo(px + psize, py + psize, px, py + psize, radius);
+      context.arcTo(px, py + psize, px, py, radius);
+      context.arcTo(px, py, px + psize, py, radius);
+      context.closePath();
+      context.fill();
+    }
+    context.fillStyle = 'rgba(255,255,255,0.25)';
+    context.fillRect(px, py, psize, 4);
+  } else if (currentSkin === 'pixel') {
+    context.fillStyle = color;
+    context.fillRect(px, py, psize, psize);
+    context.fillStyle = 'rgba(255,255,255,0.12)';
+    context.fillRect(px, py, psize, 4);
+    const half = psize / 2;
+    context.fillStyle = lightenColor(color, 0.25);
+    context.fillRect(px, py, half, half);
+    context.fillRect(px + half, py + half, psize - half, psize - half);
+    context.fillStyle = 'rgba(0,0,0,0.18)';
+    context.fillRect(px + half, py, psize - half, half);
+    context.fillRect(px, py + half, half, psize - half);
+  } else {
+    // retro (default)
+    context.fillStyle = color;
+    context.fillRect(px, py, psize, psize);
+    context.fillStyle = 'rgba(255,255,255,0.12)';
+    context.fillRect(px, py, psize, 4);
+  }
+
   const glyph = POWERUP_GLYPHS[colorIndex];
   if (glyph) {
     context.fillStyle = '#ffffff';
@@ -576,3 +651,4 @@ playerNameInput.addEventListener('keydown', e => {
 
 initTheme();
 init();
+initSkin();

@@ -88,6 +88,27 @@ body {
   background: var(--board-bg);
   border-radius: 4px;
   box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+/* ---- Skins ---- */
+body.skin-neon {
+  --board-bg: #05050a;
+  --board-border: #2bffe6;
+}
+
+body.skin-neon #board {
+  box-shadow: 0 0 25px rgba(43, 255, 230, 0.5), 0 0 60px rgba(122, 162, 247, 0.3);
+}
+
+body.skin-pastel {
+  --board-bg: #fdf6f9;
+  --board-border: #f3d9e6;
+}
+
+body.skin-pixel {
+  --board-bg: #1c1c14;
+  --board-border: #5a5238;
 }
 
 /* ---- Panel lateral ---- */
@@ -239,6 +260,16 @@ kbd {
 
 #save-score-btn:hover {
   background: var(--restart-bg-hover);
+}
+
+#skin-select {
+  background: var(--kbd-bg);
+  color: var(--text);
+  border: 1px solid var(--kbd-border);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 12px;
+  font-family: inherit;
 }
 
 /* ---- Theme toggle ---- */
